@@ -8,9 +8,8 @@ library(shinymanager)
 library(reshape2)
 
 js <- '.nav-tabs-custom .nav-tabs li.active {
-    border-top-color: #d73925;
+    border-top-color: #009900;
 }"'
-
 
 mData <- readRDS('Data/microbiome.rds')
 nData <- readRDS('Data/nutriData.rds')
@@ -31,6 +30,12 @@ credentials <- data.frame(
   password = paste("innovation",unique(mData$UserName),sep = "_"),
   stringsAsFactors = FALSE
 )
+
+monthStart <- function(x) {
+  x <- as.POSIXlt(x)
+  x$mday <- 1
+  as.Date(x)
+}
 
 messageData = data.frame("from"=c("bioTrac clinic"), 
                          "message"= c("Track your shipment"))
@@ -72,6 +77,12 @@ ui <- dashboardPage(skin = "green",
             fluidRow(
               box(h4("Scanner coming soon .."),
                   background = "olive"),
+              dateRangeInput('dateRange',label = "Period to analyze : ",
+                             format = "mm/dd/yyyy",
+                             start = Sys.Date()-60, 
+                             end=Sys.Date(),
+                             startview = "year",
+                             separator = " - "),
                 box(plotlyOutput("nplot", height = 350)),
               )
       ),
@@ -79,7 +90,13 @@ ui <- dashboardPage(skin = "green",
       tabItem(tabName = "microbiome",
               fluidRow(
                 box(h4("Newest results still being analyzed .."),
-                    background = "orange"),
+                    background = "olive"),
+                dateRangeInput('dateRange',label = "Period to analyze : ",
+                               format = "mm/dd/yyyy",
+                               start = Sys.Date()-60, 
+                               end=Sys.Date(),
+                               startview = "year",
+                               separator = " - "),
                 box(plotlyOutput("mplot", height = 350)),
               )
       ),
@@ -146,6 +163,13 @@ server <- function(input, output, session) {
     reactiveValuesToList(result_auth)
   })
   
+  Dates <- reactiveValues()
+  observe({
+    Dates$SelectedDates <- c(as.character(format(input$input_var_name[1],
+                                                 format = "%m/%d/%Y")),
+                             as.character(format(input$dateRange[2],format = "%m/%d/%Y")))
+  })
+  
   output$ib1 <- renderInfoBox({
     infoBox("Diet", 
             a("Scan a food item", onclick = "openTab('diet')", href="#"),
@@ -179,7 +203,7 @@ server <- function(input, output, session) {
           seq_len(input$s4),seq_len(input$s5))
     mood_df <- rbind(mood_df,a)
     mood_df <- mood_df[nrow(mood_df)-input$nDays:nrow(mood_df),]
-    mdf <- reshape2::melt(mood_df,id.vars = NULL)
+    mdf <- melt(mood_df,id.vars = NULL)
     
     ggplot(mdf,aes(x=variable, y = value, fill = variable)) + 
       geom_violin() + theme_classic() + 
@@ -291,3 +315,7 @@ server <- function(input, output, session) {
 
 ui <- secure_app(ui)
 shinyApp(ui, server)
+
+
+## Testing purposes:
+#preview_mobile(appPath = system.file("app.R", package = "shinyMobile"), device = "iphoneX")
