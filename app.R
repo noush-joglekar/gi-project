@@ -23,7 +23,8 @@ mood_df <- data.frame("happy" = sample(5:10,29,replace = TRUE,
                       "dizzy" = sample(1:4,29,replace = TRUE, 
                                        prob = sample(seq(0,0.25,0.1),4,TRUE)),
                       "meh" = sample(2:6,29,replace = TRUE, 
-                                       prob = sample(seq(0,0.4,0.1),5,TRUE)))
+                                       prob = sample(seq(0,0.4,0.1),5,TRUE)),
+                      "date" = format(seq(Sys.Date()-29,Sys.Date()-1,1),"%b %d"))
 
 credentials <- data.frame(
   user = unique(mData$UserName),
@@ -129,8 +130,8 @@ ui <- dashboardPage(skin = "green",
                   sliderInput("s5", "Meh", 1, 10, 10)
                 ),
                 box(h3("View results for past days"),
-                    textInput('nDays', 'Number of days', value = 7),
-                  plotOutput("moodPlot", height = 350))
+                    textInput('nDays', 'Number of days', value = 30),
+                  plotlyOutput("moodPlot", height = 350))
                 
               )
       ),
@@ -197,19 +198,23 @@ server <- function(input, output, session) {
   })
   
   
-  output$moodPlot <- renderPlot({
+  output$moodPlot <- renderPlotly({
     
     a = c(seq_len(input$s1),seq_len(input$s2),seq_len(input$s3),
-          seq_len(input$s4),seq_len(input$s5))
+          seq_len(input$s4),seq_len(input$s5),format(Sys.Date(),"%b %d"))
     mood_df <- rbind(mood_df,a)
-    mood_df <- mood_df[nrow(mood_df)-input$nDays:nrow(mood_df),]
-    mdf <- melt(mood_df,id.vars = NULL)
+    mood_df <- tail(mood_df,input$nDays)
+    mdf <- melt(mood_df,id.vars = 'date')
+    mdf$date <- as.Date(mdf$date,format = "%b %d")
     
-    ggplot(mdf,aes(x=variable, y = value, fill = variable)) + 
-      geom_violin() + theme_classic() + 
-      scale_fill_brewer(palette = "Set2") + 
+    m = ggplot(mdf,aes(x=date, y = value, color = variable, group = variable)) + 
+      geom_point() + geom_line() + 
+      facet_wrap(~variable, ncol = 1) + theme_classic() + 
+      scale_color_brewer(palette = "Set2") + 
       theme(legend.position = "none",
-            axis.text.x = element_text(size = 13))
+            axis.text.x = element_text(size = 13, angle = 90))
+    
+    ggplotly(m)
     
   })
   
