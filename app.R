@@ -131,7 +131,7 @@ ui <- dashboardPage(skin = "green",
                 ),
                 box(h3("View results for past days"),
                     textInput('nDays', 'Number of days', value = 30),
-                  plotlyOutput("moodPlot", height = 350))
+                    plotlyOutput("moodPlot", height = 650))
                 
               )
       ),
@@ -206,6 +206,7 @@ server <- function(input, output, session) {
     mood_df <- tail(mood_df,input$nDays)
     mdf <- melt(mood_df,id.vars = 'date')
     mdf$date <- as.Date(mdf$date,format = "%b %d")
+    mdf$value <- as.numeric(mdf$value)
     
     m = ggplot(mdf,aes(x=date, y = value, color = variable, group = variable)) + 
       geom_point() + geom_line() + 
@@ -324,3 +325,4 @@ shinyApp(ui, server)
 
 ## Testing purposes:
 #preview_mobile(appPath = system.file("app.R", package = "shinyMobile"), device = "iphoneX")
+#preview_mobile(url = "https://noush-joglekar.shinyapps.io/gi_final/", device = "iphoneX")
